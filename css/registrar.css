@@ -38,6 +38,8 @@
             width: 100%;
             padding: 12px;
             font-size: 18px;
+            border-radius: 20px;
+            
         }
         .btn-registro:hover {
             background-color: #b37715;
