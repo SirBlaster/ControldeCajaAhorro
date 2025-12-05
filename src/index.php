@@ -1,67 +1,129 @@
 <?php
-// src/index.php - TU APLICACIÓN DE CAJA DE AHORRO
-require_once 'config/database.php';
+    if (! empty($_GET['q'])) {
+        $query = htmlspecialchars($_GET['q'], ENT_QUOTES, 'UTF-8');
 
-// Obtener conexión a BD
-$db = getDB();
-
-// Ejemplo: Listar ahorradores
-echo "<!DOCTYPE html>";
-echo "<html lang='es'>";
-echo "<head>";
-echo "    <meta charset='UTF-8'>";
-echo "    <meta name='viewport' content='width=device-width, initial-scale=1.0'>";
-echo "    <title>Sistema de Control de Caja de Ahorro</title>";
-echo "    <style>";
-echo "        body { font-family: Arial, sans-serif; margin: 40px; }";
-echo "        .container { max-width: 1200px; margin: 0 auto; }";
-echo "        h1 { color: #2c3e50; }";
-echo "        .card { background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; }";
-echo "        .success { color: green; }";
-echo "        .error { color: red; }";
-echo "    </style>";
-echo "</head>";
-echo "<body>";
-echo "    <div class='container'>";
-echo "        <h1>🏦 Sistema de Control de Caja de Ahorro</h1>";
-echo "        <div class='card'>";
-echo "            <h2>✅ Sistema Dockerizado Funcionando</h2>";
-
-// Test de conexión a BD
-try {
-    $stmt = $db->query("SELECT DATABASE() as db_name");
-    $db_info = $stmt->fetch();
-    echo "<p class='success'>Conectado a base de datos: <strong>" . $db_info['db_name'] . "</strong></p>";
-    
-    // Listar tablas
-    $stmt = $db->query("SHOW TABLES");
-    $tablas = $stmt->fetchAll(PDO::FETCH_COLUMN);
-    
-    echo "<h3>Tablas en el sistema:</h3>";
-    echo "<ul>";
-    foreach ($tablas as $tabla) {
-        echo "<li>$tabla</li>";
+        switch ($query) {
+            case 'info':
+                phpinfo();
+                exit;
+            default:
+                header("HTTP/1.0 404 Not Found");
+                echo "Invalid query parameter.";
+                exit;
+        }
     }
-    echo "</ul>";
-    
-} catch (Exception $e) {
-    echo "<p class='error'>Error de conexión a BD: " . $e->getMessage() . "</p>";
-}
+?>
 
-echo "            <hr>";
-echo "            <h3>Servidor:</h3>";
-echo "            <p>PHP: " . phpversion() . "</p>";
-echo "            <p>Servidor: " . $_SERVER['SERVER_SOFTWARE'] . "</p>";
-echo "        </div>";
-echo "        <div class='card'>";
-echo "            <h3>Funcionalidades:</h3>";
-echo "            <ul>";
-echo "                <li><a href='#'>Gestionar Ahorradores</a></li>";
-echo "                <li><a href='#'>Registrar Movimientos</a></li>";
-echo "                <li><a href='#'>Solicitar Préstamos</a></li>";
-echo "                <li><a href='#'>Consultar Reportes</a></li>";
-echo "            </ul>";
-echo "        </div>";
-echo "    </div>";
-echo "</body>";
-echo "</html>";
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Laragon</title>
+    <style>
+    html,
+    body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+        font-family: sans-serif;
+        font-weight: 100;
+        background-color: #f9f9f9;
+        color: #333;
+    }
+
+    .container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100%;
+        text-align: center;
+    }
+
+    .content {
+        max-width: 800px;
+        padding: 100px;
+        background: #fff;
+        border-radius: 8px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .title {
+        font-size: 60px;
+        margin: 0;
+
+    }
+
+    .info {
+        margin-top: 20px;
+        line-height: 1.6;
+    }
+
+    .info a {
+        color: #007bff;
+        text-decoration: none;
+    }
+
+    .info a:hover {
+        color: #0056b3;
+        text-decoration: underline;
+    }
+
+    .opt {
+        margin-top: 30px;
+    }
+
+    .opt a {
+        color: #007bff;
+        font-size: 14px;
+        text-decoration: none;
+    }
+
+    .opt a:hover {
+        color: #0056b3;
+        text-decoration: underline;
+    }
+
+
+    button {
+        display: flex;
+        height: 3em;
+        width: 200px;
+        align-items: center;
+        justify-content: center;
+        background-color: #eeeeee4b;
+        border-radius: 3px;
+        letter-spacing: 1px;
+        transition: all 0.2s linear;
+        cursor: pointer;
+        border: none;
+        background: #fff;
+        box-shadow: 6px 6px 30px #d1d1d1, -6px -6px 30px #ffffff;
+        transform: translateY(-1px);
+    }
+
+    
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="content">
+            <h1 class="title" title="Laragon">Laragon</h1>
+            <div class="info">
+                <p><?php echo htmlspecialchars($_SERVER['SERVER_SOFTWARE'], ENT_QUOTES, 'UTF-8'); ?></p>
+                <p>PHP version: <?php echo htmlspecialchars(phpversion(), ENT_QUOTES, 'UTF-8'); ?>
+                    <a title="phpinfo()" href="/?q=info">info</a>
+                </p>
+                <p>Document Root: <?php echo htmlspecialchars($_SERVER['DOCUMENT_ROOT'], ENT_QUOTES, 'UTF-8'); ?></p>
+            </div>
+            <div class="opt">
+                <p><button><span><a title="Getting Started" target="_blank" href="https://laragon.org/docs"> Getting
+                                Started</a></span></button></p>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>
