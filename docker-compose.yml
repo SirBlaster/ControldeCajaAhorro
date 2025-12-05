@@ -4,10 +4,11 @@ services:
   # Servidor web PHP
   app:
     build: .
+    container_name: caja_app
     ports:
-      - "8080:80"  # Cambié a 8080 para evitar conflictos
+      - "8080:80"
     volumes:
-      - ./src:/var/www/html  # Montar tu código
+      - ./src:/var/www/html
     depends_on:
       - mysql
     environment:
@@ -19,6 +20,7 @@ services:
   # Base de datos MySQL
   mysql:
     image: mysql:8.0
+    container_name: caja_mysql
     restart: always
     environment:
       MYSQL_ROOT_PASSWORD: rootpassword
@@ -26,10 +28,16 @@ services:
       MYSQL_USER: caja_user
       MYSQL_PASSWORD: caja_password
     ports:
-      - "3307:3306"  # Cambié a 3307
+      - "3307:3306"
     volumes:
       - mysql_data:/var/lib/mysql
-      - ./BD.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./BD.sql:/docker-entrypoint-initdb.d/init.sql:ro
+
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 volumes:
   mysql_data:
