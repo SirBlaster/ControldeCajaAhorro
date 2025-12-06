@@ -1,21 +1,19 @@
-version: '3.8'
-
 services:
-  # Servidor web PHP
+  # Contenedor Apache + PHP
   app:
     build: .
     container_name: caja_app
     ports:
       - "8080:80"
     volumes:
-      - ./src:/var/www/php
+      - ./src:/var/www/html
     depends_on:
       - mysql
     environment:
-      - DB_HOST=mysql
-      - DB_USER=caja_user
-      - DB_PASSWORD=caja_password
-      - DB_NAME=ControlCajaAhorro
+      DB_HOST: mysql
+      DB_USER: caja_user
+      DB_PASSWORD: caja_password
+      DB_NAME: ControlCajaAhorro
 
   # Base de datos MySQL
   mysql:
@@ -31,8 +29,6 @@ services:
       - "3307:3306"
     volumes:
       - mysql_data:/var/lib/mysql
-      - ./BD.sql:/docker-entrypoint-initdb.d/init.sql:ro
-
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
       interval: 10s
