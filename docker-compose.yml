@@ -4,7 +4,7 @@ services:
     ports:
       - "8085:80"    # ← Cambia de 8080 a 8085
     volumes:
-      - ./src:/var/www/html
+      - ./src/public:/var/www/html
     depends_on:
       - mysql
     environment:
