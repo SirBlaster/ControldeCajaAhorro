@@ -1,90 +1,239 @@
--- BD_actualizar.sql
--- Script para actualizar la base de datos SIN borrar datos existentes
+-- ==========================================
+-- 1. CONFIGURACIÓN INICIAL (LIMPIEZA)
+-- ==========================================
+DROP DATABASE IF EXISTS sistema_caja;
+CREATE DATABASE sistema_caja CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE sistema_caja;
 
-USE ControlCajaAhorro;
+-- ==========================================
+-- 2. TABLAS CATÁLOGOS Y DATOS POR DEFECTO
+-- ==========================================
 
--- 1. Crear tablas si no existen
-CREATE TABLE IF NOT EXISTS TipoMovimiento (
+-- A. ROLES
+CREATE TABLE Rol (
+    Id_Rol INT AUTO_INCREMENT PRIMARY KEY,
+    Rol VARCHAR(50) NOT NULL
+);
+
+INSERT INTO Rol (Rol) VALUES 
+('Administrador'), 
+('Ahorrador'),      
+('SuperUsuario');
+
+-- B. ESTADOS
+CREATE TABLE Estado (
+    Id_Estado INT AUTO_INCREMENT PRIMARY KEY,
+    Estado VARCHAR(50) NOT NULL
+);
+
+INSERT INTO Estado (Estado) VALUES 
+('Pendiente'),  -- 1
+('Aprobado'),   -- 2
+('Rechazado'),  -- 3
+('Pagado'),     -- 4 (Para préstamos terminados)
+('Cancelado');  -- 5
+
+-- C. TIPOS DE MOVIMIENTO
+CREATE TABLE TipoMovimiento (
     Id_TipoMovimiento INT AUTO_INCREMENT PRIMARY KEY,
     Movimiento VARCHAR(50) NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS DatosSistema (
+INSERT INTO TipoMovimiento (Movimiento) VALUES 
+('Depósito'),       -- 1 (Suma a Ahorro)
+('Retiro'),         -- 2 (Resta a Ahorro)
+('Pago Préstamo');  -- 3 (Resta a Deuda Préstamo)
+
+-- D. DATOS DEL SISTEMA
+CREATE TABLE DatosSistema (
     Id_Datos INT AUTO_INCREMENT PRIMARY KEY,
-    NombreDirector VARCHAR(200) NOT NULL,
-    Periodo VARCHAR(60) NOT NULL,
-    NombreEnc_Personal VARCHAR(200) NOT NULL
+    NombreDirector VARCHAR(200),
+    Periodo VARCHAR(50),
+    NombreEnc_Personal VARCHAR(200)
 );
 
-CREATE TABLE IF NOT EXISTS Ahorrador (
+INSERT INTO DatosSistema (NombreDirector, Periodo, NombreEnc_Personal) VALUES 
+('Sidney René Toledo Martínez', '2025-2026', 'Teresa de Jesús Hernández Reyes');
+
+-- ==========================================
+-- 3. TABLA USUARIOS
+-- ==========================================
+
+CREATE TABLE Usuarios (
     Id_Ahorrador INT AUTO_INCREMENT PRIMARY KEY,
-    Nombre VARCHAR(100) NOT NULL,
-    Email VARCHAR(100),
-    FechaRegistro DATETIME DEFAULT CURRENT_TIMESTAMP
+    Nombre VARCHAR(50) NOT NULL,
+    Paterno VARCHAR(50) NOT NULL,
+    Materno VARCHAR(50) NOT NULL,
+    Institucional VARCHAR(100),
+    Personal VARCHAR(100),
+    No_Empleado INT,
+    RFC VARCHAR(13),
+    CURP VARCHAR(18),
+    Contrasena VARCHAR(255),
+    Tarjeta VARCHAR(20),
+    Id_Rol INT NOT NULL,
+    CONSTRAINT fk_usuario_rol FOREIGN KEY (Id_Rol) REFERENCES Rol(Id_Rol)
 );
 
-CREATE TABLE IF NOT EXISTS Estado (
-    Id_Estado INT AUTO_INCREMENT PRIMARY KEY,
-    Descripcion VARCHAR(50) NOT NULL
+-- Usuario Admin por defecto
+INSERT INTO Usuarios (Nombre, Paterno, Materno, Institucional, No_Empleado, Contrasena, Id_Rol) 
+VALUES ('Administrador', 'General', 'Sistema', 'admin@itsx.edu.mx', 1, '12345', 1);
+
+-- ==========================================
+-- 4. TABLA AHORRO (SALDOS) - ¡LA AGREGUÉ DE NUEVO!
+-- ==========================================
+-- Esta tabla es vital para que los Triggers tengan donde sumar/restar
+CREATE TABLE Ahorro (
+    Id_Ahorro INT AUTO_INCREMENT PRIMARY KEY,
+    MontoAhorrado DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
+    Id_Ahorrador INT NOT NULL,
+    CONSTRAINT fk_ahorro_usuario FOREIGN KEY (Id_Ahorrador) REFERENCES Usuarios(Id_Ahorrador) ON DELETE CASCADE
 );
 
-CREATE TABLE IF NOT EXISTS SolicitudPrestamo (
+-- ==========================================
+-- 5. SOLICITUDES
+-- ==========================================
+
+-- A. Solicitud de AHORRO
+CREATE TABLE Solicitud_Ahorro (
+    Id_SolicitudAhorro INT AUTO_INCREMENT PRIMARY KEY,
+    Fecha DATETIME DEFAULT CURRENT_TIMESTAMP,
+    Monto DECIMAL(10, 2),
+    
+    -- Archivos
+    ArchivoNomina VARCHAR(255),
+    ArchivoSolicitud VARCHAR(255),
+    
+    Id_Ahorrador INT NOT NULL,
+    Id_Estado INT NOT NULL DEFAULT 1,
+    
+    CONSTRAINT fk_sol_ahorro_usuario FOREIGN KEY (Id_Ahorrador) REFERENCES Usuarios(Id_Ahorrador),
+    CONSTRAINT fk_sol_ahorro_estado FOREIGN KEY (Id_Estado) REFERENCES Estado(Id_Estado)
+);
+
+-- B. Solicitud de PRÉSTAMO
+CREATE TABLE Solicitud_Prestamo (
     Id_SolicitudPrestamo INT AUTO_INCREMENT PRIMARY KEY,
-    FechaSolicitud DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FechaSolicitud DATETIME DEFAULT CURRENT_TIMESTAMP,
+    
     MontoSolicitado DECIMAL(10, 2) NOT NULL,
     Plazo_Quincenas INT NOT NULL,
-    Monto_Pago_Quincenal DECIMAL(10, 2) NOT NULL,
+    Monto_Pago_Quincenal DECIMAL(10, 2),
     Total_A_Pagar DECIMAL(10, 2) NOT NULL,
-    SaldoPendiente DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
-    ArchivoPagar VARCHAR(255),
+    SaldoPendiente DECIMAL(10, 2) NOT NULL,
+    
+    -- Archivos
+    ArchivoPagare VARCHAR(255) NOT NULL,
+    
     Id_Ahorrador INT NOT NULL,
-    Id_Estado INT NOT NULL,
-    FOREIGN KEY (Id_Ahorrador) REFERENCES Ahorrador(Id_Ahorrador),
-    FOREIGN KEY (Id_Estado) REFERENCES Estado(Id_Estado)
+    Id_Estado INT NOT NULL DEFAULT 1,
+    
+    CONSTRAINT fk_prestamo_usuario FOREIGN KEY (Id_Ahorrador) REFERENCES Usuarios(Id_Ahorrador),
+    CONSTRAINT fk_prestamo_estado FOREIGN KEY (Id_Estado) REFERENCES Estado(Id_Estado)
 );
 
-CREATE TABLE IF NOT EXISTS AuditoriaSolicitudes (
-    Id_Auditoria INT AUTO_INCREMENT PRIMARY KEY,
-    Id_Solicitud INT NOT NULL,
-    Tipo_Solicitud VARCHAR(20) NOT NULL,
-    CampoModificado VARCHAR(50) NOT NULL,
-    ValorAnterior VARCHAR(255),
-    ValorNuevo VARCHAR(255),
-    UsuarioResponsable VARCHAR(100) NOT NULL,
-    FechaCambio DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
+-- ==========================================
+-- 6. MOVIMIENTOS Y AUDITORÍA
+-- ==========================================
 
-CREATE TABLE IF NOT EXISTS Movimientos (
+CREATE TABLE Movimientos (
     Id_Movimiento INT AUTO_INCREMENT PRIMARY KEY,
-    Fecha DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    Concepto VARCHAR(255) NOT NULL,
-    Monto DECIMAL(10, 2) NOT NULL,
+    Fecha DATETIME DEFAULT CURRENT_TIMESTAMP,
+    Concepto VARCHAR(255),
+    Monto DECIMAL(10, 2),
     Id_Ahorrador INT NOT NULL,
     Id_TipoMovimiento INT NOT NULL,
-    FOREIGN KEY (Id_Ahorrador) REFERENCES Ahorrador(Id_Ahorrador),
-    FOREIGN KEY (Id_TipoMovimiento) REFERENCES TipoMovimiento(Id_TipoMovimiento)
+    CONSTRAINT fk_movimiento_usuario FOREIGN KEY (Id_Ahorrador) REFERENCES Usuarios(Id_Ahorrador),
+    CONSTRAINT fk_movimiento_tipo FOREIGN KEY (Id_TipoMovimiento) REFERENCES TipoMovimiento(Id_TipoMovimiento)
 );
 
--- 2. Insertar datos iniciales SOLO si no existen
-INSERT IGNORE INTO TipoMovimiento (Movimiento) VALUES
-('Depósito'),
-('Retiro'),
-('Pago de préstamo'),
-('Interés generado'),
-('Comisión');
+CREATE TABLE AuditoriaSolicitudes (
+    Id_Auditoria INT AUTO_INCREMENT PRIMARY KEY,
+    Id_Solicitud INT,            
+    Tipo_Solicitud VARCHAR(20),  -- 'Ahorro' o 'Prestamo'
+    CampoModificado VARCHAR(50),
+    ValorAnterior VARCHAR(255),
+    ValorNuevo VARCHAR(255),
+    UsuarioResponsable VARCHAR(100),
+    FechaCambio DATETIME DEFAULT CURRENT_TIMESTAMP
+);
 
-INSERT IGNORE INTO Estado (Descripcion) VALUES
-('Pendiente'),
-('Aprobada'),
-('Rechazada'),
-('Pagada'),
-('En proceso');
+-- ==========================================
+-- 7. ÍNDICES (TU CÓDIGO)
+-- ==========================================
 
-INSERT IGNORE INTO DatosSistema (NombreDirector, Periodo, NombreEnc_Personal) VALUES
-('Juan Pérez', 'Enero-Diciembre 2024', 'María García');
+CREATE INDEX idx_solicitud_ahorrador ON Solicitud_Ahorro(Id_Ahorrador);
+CREATE INDEX idx_solicitudp_ahorrador ON Solicitud_Prestamo(Id_Ahorrador);
+CREATE INDEX idx_movimientos_ahorrador ON Movimientos(Id_Ahorrador);
+CREATE INDEX idx_movimientos_tipo ON Movimientos(Id_TipoMovimiento);
+CREATE INDEX idx_auditoria_solicitud ON AuditoriaSolicitudes(Id_Solicitud);
 
--- 3. Verificar estructura
-SELECT '✅ Tablas verificadas y actualizadas' as Mensaje;
 
--- 4. Mostrar resumen
-SHOW TABLES;
+-- ==========================================
+-- 8. TRIGGERS (LA LÓGICA AUTOMÁTICA)
+-- ==========================================
+
+DELIMITER //
+
+-- TRIGGER 1: ACTUALIZAR SALDO AHORRO (Depósitos y Retiros)
+CREATE TRIGGER actualizar_saldo_ahorro
+AFTER INSERT ON Movimientos
+FOR EACH ROW
+BEGIN
+    -- Si es Depósito (1), SUMA
+    IF NEW.Id_TipoMovimiento = 1 THEN
+        -- Intenta actualizar, si no existe el registro, no hace nada (se debe crear al registrar usuario)
+        UPDATE Ahorro SET MontoAhorrado = MontoAhorrado + NEW.Monto
+        WHERE Id_Ahorrador = NEW.Id_Ahorrador;
+    END IF;
+
+    -- Si es Retiro (2), RESTA
+    IF NEW.Id_TipoMovimiento = 2 THEN
+        UPDATE Ahorro SET MontoAhorrado = MontoAhorrado - NEW.Monto
+        WHERE Id_Ahorrador = NEW.Id_Ahorrador;
+    END IF;
+END;
+//
+
+-- TRIGGER 2: ACTUALIZAR DEUDA PRÉSTAMO (Pagos)
+CREATE TRIGGER actualizar_deuda_prestamo
+AFTER INSERT ON Movimientos
+FOR EACH ROW
+BEGIN
+    -- Si es Pago Préstamo (3)
+    IF NEW.Id_TipoMovimiento = 3 THEN
+        -- Busca el préstamo activo (Estado 2=Aprobado) y le resta el monto
+        UPDATE Solicitud_Prestamo
+        SET SaldoPendiente = SaldoPendiente - NEW.Monto
+        WHERE Id_Ahorrador = NEW.Id_Ahorrador AND Id_Estado = 2;
+    END IF;
+END;
+//
+
+-- TRIGGER 3: AUDITAR CAMBIOS EN SOLICITUD AHORRO
+CREATE TRIGGER auditar_solicitud_ahorro
+AFTER UPDATE ON Solicitud_Ahorro
+FOR EACH ROW
+BEGIN
+    -- Si cambia el Estado
+    IF OLD.Id_Estado <> NEW.Id_Estado THEN
+        INSERT INTO AuditoriaSolicitudes (Id_Solicitud, Tipo_Solicitud, CampoModificado, ValorAnterior, ValorNuevo, UsuarioResponsable)
+        VALUES (NEW.Id_SolicitudAhorro, 'Ahorro', 'Estado', OLD.Id_Estado, NEW.Id_Estado, CURRENT_USER());
+    END IF;
+END;
+//
+
+-- TRIGGER 4: AUDITAR CAMBIOS EN SOLICITUD PRÉSTAMO
+CREATE TRIGGER auditar_solicitud_prestamo
+AFTER UPDATE ON Solicitud_Prestamo
+FOR EACH ROW
+BEGIN
+    -- Si cambia el Estado
+    IF OLD.Id_Estado <> NEW.Id_Estado THEN
+        INSERT INTO AuditoriaSolicitudes (Id_Solicitud, Tipo_Solicitud, CampoModificado, ValorAnterior, ValorNuevo, UsuarioResponsable)
+        VALUES (NEW.Id_SolicitudPrestamo, 'Prestamo', 'Estado', OLD.Id_Estado, NEW.Id_Estado, CURRENT_USER());
+    END IF;
+END;
+//
+
+DELIMITER ;

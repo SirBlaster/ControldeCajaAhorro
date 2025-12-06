@@ -1,7 +1,8 @@
 <?php
 // php/login.php
 session_start();
-require_once __DIR__ . '/../includes/db.php'; // ajusta según estructura
+require_once __DIR__ . '/../.. /lib/database.php'; // ajustar segun estructura
+
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     header('Location: /login.html');

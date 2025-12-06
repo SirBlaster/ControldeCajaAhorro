@@ -1,0 +1,9 @@
+/.vscode
+.idea/
+/node_modules/
+/vendor/
+/.env
+.DS_Store
+docker-compose.override.yml
+/tracked_files.txt
+/how origin
